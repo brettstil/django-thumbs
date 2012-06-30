@@ -15,6 +15,24 @@ Forked from <https://code.google.com/p/django-thumbs/>.
 * Deletes thumbnails when the image file is deleted
 * Provides easy access to the thumbnails' URLs (similar method as with `ImageField`)
 
+## Example
+
+    from django.db import models
+    from thumbs.fields import ImageThumbsField
+
+    class Person(models.Model):
+
+        SIZES = (
+            {'code': 'avatar', 'wxh': '125x125', 'resize': 'crop'},
+            {'code': 'm', 'wxh': '640x480', 'resize': 'scale'},
+            {'code': '150', 'wxh': '150x150'},  # 'resize' defaults to 'scale'
+        )
+        photo = ImageThumbsField(upload_to='images', sizes=SIZES)
+
+The field `photo` has a `sizes` attribute specifying desired sizes for the thumbnails. This field works the same way as `ImageField` but it also creates the desired thumbnails when uploading a new file and deletes the thumbnails when deleting the file.
+
+With `ImageThumbsField` you retrieve the URL for every thumbnail specifying its size code.  In this example we use `someone.photo.url_avatar`, `someone.photo.url_150` or `someone.photo.url_m` to get the thumbnail URL.
+
 ## Install
 
 Install django-thumbs into a virtualenv using pip:
@@ -91,25 +109,28 @@ default: `90`
 
 `THUMBS_QUALITY` sets PIL quality.  See <http://www.pythonware.com/library/pil/handbook/format-jpeg.htm>
 
-## Example
+## PublicS3BotoStorage
 
-    from django.db import models
-    from thumbs.fields import ImageThumbsField
+`PublicS3BotoStorage` generates clean URLs for Amazon S3 in code--without calling Amazon and without S3 querystring auth and expires.  Hooray!  URLs are `'public-read'`.
 
-    class Person(models.Model):
+`PublicS3BotoStorage` is based on `S3BotoStorage_AllPublic` from <https://github.com/duointeractive/django-athumb>.
 
-        SIZES = (
-            {'code': 'avatar', 'wxh': '125x125', 'resize': 'crop'},
-            {'code': 'm', 'wxh': '640x480', 'resize': 'scale'},
-            {'code': '150', 'wxh': '150x150'},  # 'resize' defaults to 'scale'
-        )
-        photo = ImageThumbsField(upload_to='images', sizes=SIZES)
+Add to `requirements.txt`:
 
-The field `photo` has a `sizes` attribute specifying desired sizes for the thumbnails. This field works the same way as `ImageField` but it also creates the desired thumbnails when uploading a new file and deletes the thumbnails when deleting the file.
+    django-storages==1.1.4
+    boto==2.5.2
 
-With `ImageThumbsField` you retrieve the URL for every thumbnail specifying its size code.  In this example we use `someone.photo.url_avatar`, `someone.photo.url_150` or `someone.photo.url_m` to get the thumbnail URL.
+In Django settings, instead of
 
-# Uninstall
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto.S3BotoStorage'
+
+use `PublicS3BotoStorage`:
+
+    DEFAULT_FILE_STORAGE = 'thumbs.backends.PublicS3BotoStorage'
+
+`PublicS3BotoStorage` looks for `AWS_S3_SECURE_URLS` and `AWS_S3_CUSTOM_DOMAIN` settings.  `AWS_S3_SECURE_URLS` sets `https` or `http`.  `AWS_S3_CUSTOM_DOMAIN` sets custom domain or `s3.amazonaws.com`.
+
+## Uninstall
 
 At any time you can go back and use `ImageField` again without altering the database or anything else. Just replace `ImageThumbsField` with `ImageField` again and make sure you delete the `sizes` attribute. Everything will work the same way it worked before using django-thumbs. Just remember to delete generated thumbnails in the case you don't want to have them anymore.
 
