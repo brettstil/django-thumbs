@@ -169,12 +169,14 @@ class ImageThumbsFieldFile(ImageFieldFile):
                         'There is already a file named %s' % size_name)
 
     def delete(self, save=True):
+        # keep self.name before deleting in super delete()
+        name = self.name
+
         super(ImageThumbsFieldFile, self).delete(save)
 
-        logger.debug('delete %s' % self.name)
         if self.field.sizes:
             for size in self.field.sizes:
-                size_name = determine_thumb(size, self.name)
+                size_name = determine_thumb(size, name)
                 try:
                     self.storage.delete(size_name)
                 except:
