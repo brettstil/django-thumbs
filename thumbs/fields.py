@@ -67,14 +67,18 @@ def resize_content(original, size, format_ext):
                 exif = image._getexif()  # returns None if no EXIF
                 if exif is not None and tag in exif:
                     orientation = exif[tag]
-                    # handle exif orientation 1 3 6 8
+
                     # http://impulseadventure.com/photo/exif-orientation.html
                     # https://github.com/recurser/exif-orientation-examples
-                    if orientation == 3:
+
+                    if orientation in [2, 4, 5, 7]:
+                        resized = resized.transpose(Image.FLIP_LEFT_RIGHT)
+
+                    if orientation == 3 or orientation == 4:
                         resized = resized.transpose(Image.ROTATE_180)
-                    elif orientation == 6:
+                    elif orientation == 6 or orientation == 7:
                         resized = resized.transpose(Image.ROTATE_270)
-                    elif orientation == 8:
+                    elif orientation == 8 or orientation == 5:
                         resized = resized.transpose(Image.ROTATE_90)
 
     # PNG and GIF are the same, JPG is JPEG
