@@ -10,10 +10,11 @@ from django.core.files.base import ContentFile
 from django.conf import settings
 
 try:
-    from PIL import Image, ImageOps
+    from PIL import Image, ImageOps, ExifTags
 except ImportError:
     import Image
     import ImageOps
+    import ExifTags
 
 import cStringIO
 import logging
@@ -23,6 +24,8 @@ import re
 THUMBS_DELIMITER = getattr(settings, 'THUMBS_DELIMITER', '-')
 THUMBS_JPG = getattr(settings, 'THUMBS_JPG', False)
 THUMBS_QUALITY = getattr(settings, 'THUMBS_QUALITY', 90)
+# autorotate thumbs based on exif orientation
+THUMBS_AUTOROTATE = getattr(settings, 'THUMBS_AUTOROTATE', True)
 VALID_RESIZES = ['crop', 'scale']
 VALID_ORIGINAL_EXT = ['jgp', 'jpeg', 'png', 'gif']
 
@@ -54,6 +57,25 @@ def resize_content(original, size, format_ext):
     else:
         image.thumbnail(wxh, Image.ANTIALIAS)
         resized = image
+
+    if THUMBS_AUTOROTATE:
+        # http://stackoverflow.com/q/4228530
+        found = [k for k, v in ExifTags.TAGS.items() if v == 'Orientation']
+        if found:
+            tag = found[0]
+            if hasattr(image, '_getexif'):  # _getexif only in JPG
+                exif = image._getexif()  # returns None if no EXIF
+                if exif is not None and tag in exif:
+                    orientation = exif[tag]
+                    # handle exif orientation 1 3 6 8
+                    # http://impulseadventure.com/photo/exif-orientation.html
+                    # https://github.com/recurser/exif-orientation-examples
+                    if orientation == 3:
+                        resized = resized.transpose(Image.ROTATE_180)
+                    elif orientation == 6:
+                        resized = resized.transpose(Image.ROTATE_270)
+                    elif orientation == 8:
+                        resized = resized.transpose(Image.ROTATE_90)
 
     # PNG and GIF are the same, JPG is JPEG
     format = format_ext.upper()
