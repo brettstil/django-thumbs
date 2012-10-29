@@ -47,17 +47,7 @@ def resize_content(original, size, format_ext):
     if image.mode not in ('L', 'RGB', 'RGBA'):
         image = image.convert('RGB')
 
-    split = size['wxh'].split('x')
-    wxh = (int(split[0]), int(split[1]))
-
-    # 'crop'
-    if 'resize' in size and size['resize'] == 'crop':
-        resized = ImageOps.fit(image, wxh, Image.ANTIALIAS)
-    # 'scale' default
-    else:
-        image.thumbnail(wxh, Image.ANTIALIAS)
-        resized = image
-
+    # rotate flip before crop scale
     if THUMBS_AUTOROTATE:
         # http://stackoverflow.com/q/4228530
         found = [k for k, v in ExifTags.TAGS.items() if v == 'Orientation']
@@ -72,14 +62,25 @@ def resize_content(original, size, format_ext):
                     # https://github.com/recurser/exif-orientation-examples
 
                     if orientation in [2, 4, 5, 7]:
-                        resized = resized.transpose(Image.FLIP_LEFT_RIGHT)
+                        image = image.transpose(Image.FLIP_LEFT_RIGHT)
 
                     if orientation == 3 or orientation == 4:
-                        resized = resized.transpose(Image.ROTATE_180)
+                        image = image.transpose(Image.ROTATE_180)
                     elif orientation == 6 or orientation == 7:
-                        resized = resized.transpose(Image.ROTATE_270)
+                        image = image.transpose(Image.ROTATE_270)
                     elif orientation == 8 or orientation == 5:
-                        resized = resized.transpose(Image.ROTATE_90)
+                        image = image.transpose(Image.ROTATE_90)
+
+    split = size['wxh'].split('x')
+    wxh = (int(split[0]), int(split[1]))
+
+    # 'crop'
+    if 'resize' in size and size['resize'] == 'crop':
+        resized = ImageOps.fit(image, wxh, Image.ANTIALIAS)
+    # 'scale' default
+    else:
+        image.thumbnail(wxh, Image.ANTIALIAS)
+        resized = image
 
     # PNG and GIF are the same, JPG is JPEG
     format = format_ext.upper()
