@@ -10,11 +10,12 @@ from django.core.files.base import ContentFile
 from django.conf import settings
 
 try:
-    from PIL import Image, ImageOps, ExifTags
+    from PIL import Image, ImageOps, ExifTags, ImageFile
 except ImportError:
     import Image
     import ImageOps
     import ExifTags
+    import ImageFile
 
 import cStringIO
 import logging
@@ -22,8 +23,11 @@ logger = logging.getLogger(__name__)
 import re
 
 THUMBS_DELIMITER = getattr(settings, 'THUMBS_DELIMITER', '-')
-THUMBS_JPG = getattr(settings, 'THUMBS_JPG', False)
-THUMBS_QUALITY = getattr(settings, 'THUMBS_QUALITY', 90)
+# always save jpg thumbs regardless of original file format
+THUMBS_JPG = getattr(settings, 'THUMBS_JPG', True)
+THUMBS_QUALITY = getattr(settings, 'THUMBS_QUALITY', 75)  # JPEG
+THUMBS_OPTIMIZE = getattr(settings, 'THUMBS_OPTIMIZE', True)  # JPEG PNG
+THUMBS_PROGRESSIVE = getattr(settings, 'THUMBS_PROGRESSIVE', False)  # JPEG
 # autorotate thumbs based on exif orientation
 THUMBS_AUTOROTATE = getattr(settings, 'THUMBS_AUTOROTATE', True)
 VALID_RESIZES = ['crop', 'scale']
@@ -87,11 +91,24 @@ def resize_content(original, size, format_ext):
     if format == 'JPG':
         format = 'JPEG'
 
-    # http://www.pythonware.com/library/pil/handbook/format-jpeg.htm
-    quality = THUMBS_QUALITY
-
     io = cStringIO.StringIO()
-    resized.save(io, format, quality=quality)
+
+    # http://www.pythonware.com/library/pil/handbook/format-gif.htm
+    # http://www.pythonware.com/library/pil/handbook/format-png.htm
+    # http://www.pythonware.com/library/pil/handbook/format-jpeg.htm
+    if format == 'GIF':
+        resized.save(io, format)
+    elif format == 'PNG':
+        resized.save(io, format, optimize=THUMBS_OPTIMIZE)
+    else:  # 'JPEG'
+        try:
+            resized.save(io, 'JPEG', quality=THUMBS_QUALITY,
+                optimize=THUMBS_OPTIMIZE, progressive=THUMBS_PROGRESSIVE)
+        except IOError:
+            ImageFile.MAXBLOCK = resized.size[0] * resized.size[1]
+            resized.save(io, 'JPEG', quality=THUMBS_QUALITY,
+                optimize=THUMBS_OPTIMIZE, progressive=THUMBS_PROGRESSIVE)
+
     return ContentFile(io.getvalue())
 
 
