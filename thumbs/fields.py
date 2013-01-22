@@ -109,6 +109,13 @@ def resize_content(original, size, format_ext):
 
     w_h = sting2tuple(size['wxh'], image.size)
 
+    # special case for fixed width or fixed height
+    # pil image.thumbnail doesn't upscale if w_h is bigger than original image
+    # it only creates same size or smaller thumbs, so use fit instead
+    # fixed width 200x should have 200px width width
+    if '' in size['wxh'].split('x'):
+        size['resize'] = 'crop'
+
     # 'crop'
     if 'resize' in size and size['resize'] == 'crop':
         resized = ImageOps.fit(image, w_h, Image.ANTIALIAS)

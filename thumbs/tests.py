@@ -154,13 +154,15 @@ class ValidateSizeTest(TestCase):
         self.assertRaises(SizeError, validate_size,
             {'code': 'small', 'wxh': '100x 100'})
 
-    def test_sting2tuple(self):
-        original_w_h = (2400, 1200)
-
-        # original_w_h not relevant
+    def test_sting2tuple_notrelevant(self):
+        # on wxh string, original_w_h is not relevant
+        original_w_h = (1250, 750)
         w, h = sting2tuple('100x100', original_w_h)
         self.assertEqual(w, 100)
         self.assertEqual(h, 100)
+
+    def test_sting2tuple_downscale(self):
+        original_w_h = (2400, 1200)
 
         w, h = sting2tuple('240x', original_w_h)
         self.assertEqual(w, 240)
@@ -169,6 +171,20 @@ class ValidateSizeTest(TestCase):
         w, h = sting2tuple('x60', original_w_h)
         self.assertEqual(w, 120)
         self.assertEqual(h, 60)
+
+    def test_sting2tuple_upscale(self):
+        '''
+        Does a small image upscale on a fixed width?
+        '''
+        original_w_h = (150, 242)
+
+        w, h = sting2tuple('300x', original_w_h)
+        self.assertEqual(w, 300)
+        self.assertEqual(h, 484)
+
+        w, h = sting2tuple('x300', original_w_h)
+        self.assertEqual(w, 185)
+        self.assertEqual(h, 300)
 
     def test_resize_optional(self):
         validate_size({'code': 'small', 'wxh': '100x100'})
