@@ -59,6 +59,7 @@ Each size is a dictionary that defines a thumbnail.  For example,
     SIZES = (
         {'code': 'avatar', 'wxh': '125x125', 'resize': 'crop'},
         {'code': 'm', 'wxh': '640x480', 'resize': 'scale'},
+        {'code': 'flatrow', 'wxh': 'x120'},
         {'code': '150', 'wxh': '150x150'},  # 'resize' defaults to 'scale'
     )
 
@@ -66,15 +67,19 @@ Size validation errors will raise `SizeError`.
 
 ### code (required)
 
-matches re: `^[0-9a-z]+$`
+matches re: `RE_CODE`
 
 `code` is the size name.  It appears in the thumb filename separated by `THUMBS_DELIMITER`.  For example, `'original.jpg'` becomes `'original-small.jpg'` for the default delimiter `'-'` and code `'small'`.
 
 ### wxh (required)
 
-matches re: `^\d+x\d+$`
+matches re: `RE_WXH`
 
 `wxh` is the width x height as a string.
+
+Fixed width images are supported with `240x`.  The thumbnail will be scaled
+down *or up* to a 240 pixel width.  Fixed height images are similarly
+supported with `90x`.
 
 ### resize (optional)
 
