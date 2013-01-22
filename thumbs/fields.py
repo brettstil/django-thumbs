@@ -30,8 +30,11 @@ THUMBS_OPTIMIZE = getattr(settings, 'THUMBS_OPTIMIZE', True)  # JPEG PNG
 THUMBS_PROGRESSIVE = getattr(settings, 'THUMBS_PROGRESSIVE', False)  # JPEG
 # autorotate thumbs based on exif orientation
 THUMBS_AUTOROTATE = getattr(settings, 'THUMBS_AUTOROTATE', True)
+
 VALID_RESIZES = ['crop', 'scale']
 VALID_ORIGINAL_EXT = ['jgp', 'jpeg', 'png', 'gif']
+RE_CODE = '^[0-9a-z]+$'
+RE_WXH = '^(\d+x\d+|\d+x|x\d+)$'
 
 
 class SizeError(Exception):
@@ -40,6 +43,35 @@ class SizeError(Exception):
 
 class OriginalError(Exception):
     pass
+
+
+def sting2tuple(wxh, original_w_h):
+    '''
+    Converts a wxh string into a tuple of integers ready for PIL.
+
+    Handles fixed width '200x' or fixed height 'x100' size by setting
+    the empty string height or width, respectively.
+
+    Cropping is not relevant to fixed width since the image is always
+    scaled down or up to the fixed width.  At this point extremely
+    vertical original images, for example 10x500, are still scaled.
+
+    '''
+
+    split = wxh.split('x')
+    w = split[0]
+    h = split[1]
+
+    if '' in split:
+        original_w, original_h = original_w_h
+        # fixed width, '240x'
+        if h == '':
+            h = int(w) * original_h / original_w
+        # fixed height, 'x100'
+        elif w == '':
+            w = int(h) * original_w / original_h
+
+    return (int(w), int(h))
 
 
 def resize_content(original, size, format_ext):
@@ -75,15 +107,14 @@ def resize_content(original, size, format_ext):
                     elif orientation == 8 or orientation == 5:
                         image = image.transpose(Image.ROTATE_90)
 
-    split = size['wxh'].split('x')
-    wxh = (int(split[0]), int(split[1]))
+    w_h = sting2tuple(size['wxh'], image.size)
 
     # 'crop'
     if 'resize' in size and size['resize'] == 'crop':
-        resized = ImageOps.fit(image, wxh, Image.ANTIALIAS)
+        resized = ImageOps.fit(image, w_h, Image.ANTIALIAS)
     # 'scale' default
     else:
-        image.thumbnail(wxh, Image.ANTIALIAS)
+        image.thumbnail(w_h, Image.ANTIALIAS)
         resized = image
 
     # PNG and GIF are the same, JPG is JPEG
@@ -159,9 +190,9 @@ def validate_size(size):
         raise SizeError('Invalid size.')
 
     # required
-    if not 'code' in size or not re.match('^[0-9a-z]+$', size['code']):
+    if not 'code' in size or not re.match(RE_CODE, size['code']):
         raise SizeError('Valid code required, eg, small.')
-    if not 'wxh' in size or not re.match('^\d+x\d+$', size['wxh']):
+    if not 'wxh' in size or not re.match(RE_WXH, size['wxh']):
         raise SizeError('Valid wxh required, eg, 400x300.')
     # optional
     if 'resize' in size:

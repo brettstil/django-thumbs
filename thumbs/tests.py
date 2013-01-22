@@ -1,6 +1,7 @@
 from django.test import TestCase
 
-from thumbs.fields import validate_size, split_original, determine_thumb
+from thumbs.fields import validate_size, split_original, determine_thumb, \
+    sting2tuple
 from thumbs.fields import SizeError, OriginalError
 
 import logging
@@ -134,10 +135,12 @@ class ValidateSizeTest(TestCase):
         validate_size({'code': 'small', 'wxh': '5x5'})
         validate_size({'code': 'small', 'wxh': '1024x512'})
 
+        # '100x' 'x100' now supported for fixed width, fixed heigh
+        validate_size({'code': 'fixedwidth', 'wxh': '100x'})
+        validate_size({'code': 'fixedheight', 'wxh': 'x100'})
+
         self.assertRaises(SizeError, validate_size,
-            {'code': 'small', 'wxh': 'x100'})
-        self.assertRaises(SizeError, validate_size,
-            {'code': 'small', 'wxh': '100x'})
+            {'code': 'small', 'wxh': ''})
         self.assertRaises(SizeError, validate_size,
             {'code': 'small', 'wxh': 'x'})
         self.assertRaises(SizeError, validate_size,
@@ -150,6 +153,22 @@ class ValidateSizeTest(TestCase):
             {'code': 'small', 'wxh': '1-0x100'})
         self.assertRaises(SizeError, validate_size,
             {'code': 'small', 'wxh': '100x 100'})
+
+    def test_sting2tuple(self):
+        original_w_h = (2400, 1200)
+
+        # original_w_h not relevant
+        w, h = sting2tuple('100x100', original_w_h)
+        self.assertEqual(w, 100)
+        self.assertEqual(h, 100)
+
+        w, h = sting2tuple('240x', original_w_h)
+        self.assertEqual(w, 240)
+        self.assertEqual(h, 120)
+
+        w, h = sting2tuple('x60', original_w_h)
+        self.assertEqual(w, 120)
+        self.assertEqual(h, 60)
 
     def test_resize_optional(self):
         validate_size({'code': 'small', 'wxh': '100x100'})
