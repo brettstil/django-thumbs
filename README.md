@@ -110,9 +110,27 @@ Set `THUMBS_JPG` to `True` to force all thumbnails to `.jpg` format and file ext
 
 ### THUMBS_QUALITY
 
-default: `90`
+default: `75`
 
 `THUMBS_QUALITY` sets PIL quality.  See <http://www.pythonware.com/library/pil/handbook/format-jpeg.htm>
+
+### THUMBS_OPTIMIZE
+
+default: `True`
+
+`THUMBS_OPTIMIZE` sets PIL optimize option on JPG or PNG images.
+
+### THUMBS_PROGRESSIVE
+
+default: `False`
+
+`THUMBS_PROGRESSIVE` sets PIL progressive option on JPG images.
+
+### THUMBS_AUTOROTATE
+
+default: `True`
+
+`THUMBS_AUTOROTATE` rotates thumbnails based on original EXIF data, if any.
 
 ## PublicS3BotoStorage
 
