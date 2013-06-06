@@ -166,9 +166,13 @@ def resize_content(original, size, format_ext):
                 resized.save(io, 'JPEG', quality=THUMBS_QUALITY,
                     optimize=THUMBS_OPTIMIZE, progressive=THUMBS_PROGRESSIVE)
         except IOError:
-            ImageFile.MAXBLOCK = resized.size[0] * resized.size[1]
-            resized.save(io, 'JPEG', quality=THUMBS_QUALITY,
-                optimize=THUMBS_OPTIMIZE, progressive=THUMBS_PROGRESSIVE)
+            old_maxblock = ImageFile.MAXBLOCK
+            ImageFile.MAXBLOCK = max(resized.size) ** 2
+            try:
+                resized.save(io, 'JPEG', quality=THUMBS_QUALITY,
+                    optimize=THUMBS_OPTIMIZE, progressive=THUMBS_PROGRESSIVE)
+            finally:
+                ImageFile.MAXBLOCK = old_maxblock
 
     return ContentFile(io.getvalue())
 
