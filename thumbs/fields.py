@@ -21,6 +21,9 @@ import cStringIO
 import logging
 logger = logging.getLogger(__name__)
 import re
+import os
+import sys
+
 
 THUMBS_DELIMITER = getattr(settings, 'THUMBS_DELIMITER', '-')
 # always save jpg thumbs regardless of original file format
@@ -43,6 +46,23 @@ class SizeError(Exception):
 
 class OriginalError(Exception):
     pass
+
+
+class quiet(object):
+    """
+A context manager for suppressing the stderr activity of PIL's C libraries.
+Based on http://stackoverflow.com/a/978264/155370
+
+"""
+    def __enter__(self):
+        self.stderr_fd = sys.__stderr__.fileno()
+        self.null_fd = os.open(os.devnull, os.O_RDWR)
+        self.old = os.dup(self.stderr_fd)
+        os.dup2(self.null_fd, self.stderr_fd)
+
+    def __exit__(self, *args, **kwargs):
+        os.dup2(self.old, self.stderr_fd)
+        os.close(self.null_fd)
 
 
 def sting2tuple(wxh, original_w_h):
@@ -140,8 +160,11 @@ def resize_content(original, size, format_ext):
         resized.save(io, format, optimize=THUMBS_OPTIMIZE)
     else:  # 'JPEG'
         try:
-            resized.save(io, 'JPEG', quality=THUMBS_QUALITY,
-                optimize=THUMBS_OPTIMIZE, progressive=THUMBS_PROGRESSIVE)
+            # suppress pil "Suspension not allowed here" message
+            # https://github.com/matthewwithanm/django-imagekit/issues/91#issuecomment-5238299
+            with quiet():
+                resized.save(io, 'JPEG', quality=THUMBS_QUALITY,
+                    optimize=THUMBS_OPTIMIZE, progressive=THUMBS_PROGRESSIVE)
         except IOError:
             ImageFile.MAXBLOCK = resized.size[0] * resized.size[1]
             resized.save(io, 'JPEG', quality=THUMBS_QUALITY,
